@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import './styles/generate-team.css'
+import { fetchFormats } from '../utils/format-fetcher'
+import '../styles/generate-team.css'
 
-const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
-const TIERS = ['String1', 'String2', 'String3']
+const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex', 'BDSP']
 
 export default function GenerateTeam() {
   const [generation, setGeneration] = useState('')
@@ -17,15 +17,10 @@ export default function GenerateTeam() {
     setCheckboxes((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
+  const TIERS = generation ? fetchFormats(generation) : []
+
   return (
     <div className="generate-page">
-      <nav className="navbar">
-        <div className="nav-links">
-          <a href="/" className="nav-link">Home</a>
-          <a href="/profile" className="nav-link">Profile</a>
-          <a href="/options" className="nav-link">Options</a>
-        </div>
-      </nav>
 
       <main className="generate-main">
         <div className="generate-container">
@@ -40,11 +35,11 @@ export default function GenerateTeam() {
                     id="generation"
                     className="form-select"
                     value={generation}
-                    onChange={(e) => setGeneration(e.target.value)}
+                    onChange={(e) => {setGeneration(e.target.value); setTier('')}}
                   >
                     <option value="" disabled>Select...</option>
                     {GENERATIONS.map((g) => (
-                      <option key={g} value={g}>Generation {g}</option>
+                      <option key={g} value={g}>{g}</option>
                     ))}
                   </select>
                   <span className="select-arrow">▾</span>
@@ -52,12 +47,13 @@ export default function GenerateTeam() {
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="tier">Tier</label>
+                <label className="form-label" htmlFor="tier">Format</label>
                 <div className="select-wrapper">
                   <select
                     id="tier"
                     className="form-select"
                     value={tier}
+                    disabled={!generation}
                     onChange={(e) => setTier(e.target.value)}
                   >
                     <option value="" disabled>Select...</option>
