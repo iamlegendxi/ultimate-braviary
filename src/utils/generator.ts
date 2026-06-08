@@ -46,7 +46,7 @@ export function generateTeam(args: GenerationOptions): Pokemon[] {
 
 
     //fallthrough in this switch statement is intentional
-    switch (args.tier) {
+    switch (args.tier.toUpperCase()) {
         // @ts-ignore
         case 'LC':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'ZU').map(pokemon => pokemon.num)];
@@ -73,9 +73,9 @@ export function generateTeam(args: GenerationOptions): Pokemon[] {
                     || pokemon.tier.toUpperCase() === 'UUBL').map(pokemon => pokemon.num)];
         // @ts-ignore
         case 'OU':
-            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'Ubers').map(pokemon => pokemon.num)];
+            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'UBERS').map(pokemon => pokemon.num)];
         // @ts-ignore
-        case 'Ubers':
+        case 'UBERS':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'AG').map(pokemon => pokemon.num)];
         case 'AG':
             break; //no filtering required, AG is everyone
