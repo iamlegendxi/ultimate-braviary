@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { fetchFormats } from '../utils/format-fetcher'
+import { getPokemonByGeneration, getPokemonTier } from '../utils/generator'
 import '../styles/generate-team.css'
 
-const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex', 'BDSP']
+const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex']
 
 export default function GenerateTeam() {
   const [generation, setGeneration] = useState('')
@@ -17,8 +18,12 @@ export default function GenerateTeam() {
     setCheckboxes((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const TIERS = generation ? fetchFormats(generation) : []
+  const getPokemon = (): string[] => {
+    console.log(getPokemonTier(4));
+    return getPokemonByGeneration(parseInt(generation));
+  }
 
+  const TIERS = generation ? fetchFormats(generation) : []
   return (
     <div className="generate-page">
 
@@ -83,7 +88,7 @@ export default function GenerateTeam() {
               ))}
             </div>
 
-            <button className="generate-button">
+            <button className="generate-button" onClick={getPokemon}>
               Generate
             </button>
           </div>
