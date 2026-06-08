@@ -1,4 +1,4 @@
-import './App.css'
+import './styles/App.css'
 import { useState } from 'react'
 
 export default function App() {
@@ -10,8 +10,8 @@ export default function App() {
       <nav className="navbar">
         <div className="nav-links">
           <a href="#" className="nav-link active">Home</a>
-          <a href="#" className="nav-link">Profile</a>
-          <a href="#" className="nav-link">Options</a>
+          <a href="#" className="nav-link">FAQ</a>
+          <a href="#" className="nav-link">About</a>
         </div>
       </nav>
 
