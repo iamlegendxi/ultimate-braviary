@@ -1,5 +1,5 @@
 import { Dex } from '@pkmn/dex';
-import { Generations, Specie, type Item } from '@pkmn/data';
+import { Generations, Specie, type Item, type Move } from '@pkmn/data';
 import * as Banlists from './custom-banlists';
 
 const gens = new Generations(Dex);
@@ -23,7 +23,7 @@ export interface GenerationOptions {
     forceOneAttackingMove: boolean; //all Pokemon will have at least one attacking move - true by default
 }
 
-export function generateTeam(args: GenerationOptions): Item[] {
+export function generateTeam(args: GenerationOptions): Move[] {
 
     let whitelist = generatePokemonWhitelist(args);
     let item_whitelist = generateItemWhitelist(args);
@@ -36,7 +36,7 @@ export function generateTeam(args: GenerationOptions): Item[] {
 
     //todo: generate 6 Pokemon with a held item, ability, 4 moves, and a shiny status
 
-    return item_whitelist;
+    return move_whitelist;
 }
 
 function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
@@ -144,11 +144,12 @@ function generateItemWhitelist(args: GenerationOptions): Item[] {
 }
 
 
-function generateMoveWhitelist(args: GenerationOptions): string[] {
+function generateMoveWhitelist(args: GenerationOptions): Move[] {
 
     let banlist: string[];
     let fetch_string = args.generation === 'Nat Dex' ? 'natdexitems' : `gen${args.generation}moves`;
-    let moves = args.generation === 'Nat Dex' ? gens.get('9').items : gens.get(args.generation).moves;
+    //todo: change nat dex to pull all moves, not just gen 9
+    let moves = args.generation === 'Nat Dex' ? gens.get('9').moves : gens.get(args.generation).moves;
 
     switch (args.tier.toUpperCase()) {
         case 'LC':
@@ -172,8 +173,8 @@ function generateMoveWhitelist(args: GenerationOptions): string[] {
     //todo: move clauses
     //todo: filter out unusable moves
 
-
-    return [];
+    let whitelist = [...moves].filter(move => !banlist.includes(move.name));
+    return whitelist;
 }
 
 function generateAbilityWhitelist(args: GenerationOptions): string[] {
