@@ -1,5 +1,5 @@
 import { Dex } from '@pkmn/dex';
-import { Generations, Specie, type Ability, type Item, type Move } from '@pkmn/data';
+import { Generations, type Learnset, Specie, type Ability, type Item, type Move } from '@pkmn/data';
 import * as Banlists from './custom-banlists';
 
 const gens = new Generations(Dex);
@@ -55,7 +55,7 @@ export async function generateTeam(args: GenerationOptions): Promise<any> {
         let index = Math.floor(Math.random() * whitelist.length)
         let pickedMon = whitelist[index];
         console.log(pickedMon.name);
-        let learnset = await getPokemonLearnset(pickedMon, args);
+        let learnset = await getPokemonLearnset(pickedMon, args, move_whitelist);
         ret = learnset;
         break;
 
@@ -246,10 +246,11 @@ function generateSeed(args: GenerationOptions, mons: Pokemon[], timestamp: numbe
     return seed;
 }
 
-async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions): Promise<string[]> {
+async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whitelist: Move[]): Promise<string[]> {
     let learnset; let movepool;
     let enforceStrictLearnset: boolean; //forces all moves to be learnable in the currently selected generation
     let moves: string[] = [];
+    let base_mon = pokemon.baseSpecies ?? pokemon.name
 
     switch (args.generation) {
         case '1':
@@ -264,16 +265,37 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions): Pro
         case '8':
         case '9':
             enforceStrictLearnset = true;
-            learnset = await gens.get(args.generation).learnsets.get(pokemon.name);
-            if (!learnset) return [];
-            movepool = Object.entries(learnset.learnset!)
-                .map(([name, methods]) => ({ move: gens.get(args.generation).moves.get(name), method: methods })).filter(item => item);
+            if (base_mon !== pokemon.name) {
+                //merge base form's moveset with form's moveset
+                const [form_set, base_set] = await Promise.all([
+                    gens.get(args.generation).learnsets.get(pokemon.name),
+                    gens.get(args.generation).learnsets.get(base_mon)
+                ]);
+                if (!form_set && !base_set) return [];
+                const mergedLearnset = {
+                    ...base_set?.learnset,
+                    ...form_set?.learnset
+                }
+
+                movepool = Object.entries(mergedLearnset)
+                    .map(([name, methods]) => ({
+                        move: gens.get(args.generation).moves.get(name),
+                        method: methods
+                    }))
+                    .filter(item => item.move !== undefined)
+            }
+            else {
+                learnset = await gens.get(args.generation).learnsets.get(pokemon.name);
+                if (!learnset) return [];
+                movepool = Object.entries(learnset.learnset!)
+                    .map(([name, methods]) => ({ move: gens.get(args.generation).moves.get(name), method: methods }))
+                    .filter(item => item.move != undefined);
+            }
             console.log(movepool);
             let moves_learned = Math.min(4, movepool.length);
             for (let i: number = 0; i < moves_learned; i++) {
-                let picked = pickMove(movepool, moves, args, enforceStrictLearnset);
+                let picked = pickMove(movepool, moves, args, whitelist, enforceStrictLearnset);
                 if (picked === "") i--;
-                if (picked === "") console.log("Move skipped");
                 else moves.push(picked);
             }
             break;
@@ -287,13 +309,17 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions): Pro
 }
 
 //pick a move, non-natdex edition
-function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: GenerationOptions, enforceStrictLearnset: boolean): string {
+function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: GenerationOptions,
+    whitelist: Move[], enforceStrictLearnset: boolean): string {
     try {
 
         let index = Math.floor(Math.random() * movepool.length)
 
         //failed check: the move is null
-        if (!movepool[index]) return "";
+        if (!movepool[index] || !movepool[index].move) return "";
+
+        //failed check: the move is not whitelisted
+        if (!whitelist.includes(movepool[index].move)) return "";
 
         //strips methods down to their base generations, keeping whether or not it was learned by event, egg or tutor
         let gens_learned = movepool[index].method.map(m => m.includes('S') || m.includes('E')
@@ -305,14 +331,14 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
         //failed check: two event moves that are from different events
         let incompatible_learned_event_moves = learnedMoves.map((move) => ({
             move: move,
-            method: movepool.filter(o => o.move!.name === move && o.method.every(m => m.includes('S')))
+            method: movepool.filter(o => o.move && o.move.name === move && o.method.every(m => m.includes('S')))
                 .flatMap(o => o.method)
         })).filter(o => o.method.length > 0).filter(o => o.method.some(m => !gens_learned.includes(m)));
         if (gens_learned.every(m => m.includes('S'))
             && incompatible_learned_event_moves.length > 0)
             return "";
 
-        let move_name = movepool[index]!.move!.name;
+        let move_name = movepool[index].move.name;
 
         //failed check: learning an egg move combined with other gen egg move or earlier gen tutor move
         let latest_learned_egg_gen = gens_learned.filter(m => m.includes('E'))
@@ -320,7 +346,7 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
         if (latest_learned_egg_gen) {
             let incompatible_with_egg_move = learnedMoves.map((move) => ({
                 move: move,
-                method: movepool.filter(o => o.move!.name === move && o.method.every(m => m.includes('E') ||
+                method: movepool.filter(o => o.move && o.move.name === move && o.method.every(m => m.includes('E') ||
                     (m.includes('T') && parseInt(m.replace('T', '')) < latest_learned_egg_gen)))
                     .flatMap(o => o.method)
             })).filter(o => o.method.length > 0).filter(o => o.method.some(m => !gens_learned.includes(m)));
@@ -335,7 +361,7 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
         if (latest_learned_tutor_gen) {
             let incompatible_with_tutor_move = learnedMoves.map((move) => ({
                 move: move,
-                method: movepool.filter(o => o.move!.name === move && 
+                method: movepool.filter(o => o.move && o.move!.name === move &&
                     o.method.every(m => (m.includes('E') && parseInt(m.replace('E', '')) > latest_learned_tutor_gen)))
                     .flatMap(o => o.method)
             })).filter(o => o.method.length > 0).filter(o => o.method.some(m => !gens_learned.includes(m)));
@@ -344,6 +370,10 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
                 return "";
         }
 
+        //failed check: forceAttackingMove is on and the pokemon can learn non-status moves (but hasn't yet)
+        let has_non_status_moves = movepool.some(m => m.move && m.move.category !== "Status");
+        if ((args.forceOneAttackingMove && has_non_status_moves) && learnedMoves.length === 0
+            && movepool[index].move?.category === "Status") return "";
 
         //failed check: move already exists in movepool
         if (!learnedMoves.includes(move_name)) return move_name;

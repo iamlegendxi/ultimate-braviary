@@ -5,6 +5,6 @@ export const CLAUSES = {
     'ohko': [], //one hit KO moves
     'moody': [], //moody ability
     'swagger': [], //swagger move
-    'baton_pass': [], //baton pass move
+    'baton_pass': ['Baton Pass'], //baton pass move
     'species': [], //no duplicate pokemon
 }
