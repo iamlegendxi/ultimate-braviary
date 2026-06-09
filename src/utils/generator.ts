@@ -4,6 +4,11 @@ import * as Banlists from './custom-banlists';
 
 const gens = new Generations(Dex);
 
+interface MoveMethodObject {
+    move: Move | undefined;
+    method: string[];
+}
+
 export interface Pokemon {
     id: number;
     name: string;
@@ -13,9 +18,18 @@ export interface Pokemon {
     evs: number[];
     heldItem: string;
     shiny: boolean;
+    image: string;
+}
+
+export interface Team {
+    mons: Pokemon[];
+    seed: number;
+    timestamp: number;
+    user: number;
 }
 
 export interface GenerationOptions {
+    user: number;
     tier: string;
     generation: string;
     includeLegendaries: boolean; //allow legendaries to be included - true by default
@@ -23,20 +37,38 @@ export interface GenerationOptions {
     forceOneAttackingMove: boolean; //all Pokemon will have at least one attacking move - true by default
 }
 
-export function generateTeam(args: GenerationOptions): Ability[] {
+export async function generateTeam(args: GenerationOptions): Promise<any> {
 
     let whitelist = generatePokemonWhitelist(args);
     let item_whitelist = generateItemWhitelist(args);
     let move_whitelist = generateMoveWhitelist(args);
     let ability_whitelist = generateAbilityWhitelist(args);
 
-    //todo: generate seed
-
-    let seed = 0;
-
     //todo: generate 6 Pokemon with a held item, ability, 4 moves, and a shiny status
 
-    return ability_whitelist;
+    let pokemon_generated = args.tier.toUpperCase() === '1V1' ? 1 : 6;
+    let mons: Pokemon[] = [];
+
+    let ret;
+
+    for (let i: number = 0; i < pokemon_generated; i++) {
+        let index = Math.floor(Math.random() * whitelist.length)
+        let pickedMon = whitelist[index];
+        console.log(pickedMon.name);
+        let learnset = await getPokemonLearnset(pickedMon, args);
+        ret = learnset;
+        break;
+
+    }
+
+
+    //todo: generate seed
+
+    let seed = generateSeed(args, [], Date.now());
+
+    //todo: build team from pokemon
+
+    return ret;
 }
 
 function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
@@ -105,6 +137,7 @@ function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
     }
 
     //todo: further filter legendaries - check Specie.tags for Legendary, Mythical, Ultra Beast, etc
+    //todo: filter non-tiered NFE and LC if nfe tag is checked
     //todo: blanket filters like filtering Illegal pokemon and unreleased ones
 
     let whitelist = [...species].filter(pokemon => !banlist.includes(pokemon));
@@ -206,6 +239,123 @@ function generateAbilityWhitelist(args: GenerationOptions): Ability[] {
 
     let whitelist = [...abilities].filter(ability => !banlist.includes(ability.name));
     return whitelist;
+}
+
+function generateSeed(args: GenerationOptions, mons: Pokemon[], timestamp: number): number {
+    let seed = timestamp ^ (args.user * 83492791);
+    return seed;
+}
+
+async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions): Promise<string[]> {
+    let learnset; let movepool;
+    let enforceStrictLearnset: boolean; //forces all moves to be learnable in the currently selected generation
+    let moves: string[] = [];
+
+    switch (args.generation) {
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        // @ts-ignore
+        case '7':
+            enforceStrictLearnset = false;
+        case '8':
+        case '9':
+            enforceStrictLearnset = true;
+            learnset = await gens.get(args.generation).learnsets.get(pokemon.name);
+            if (!learnset) return [];
+            movepool = Object.entries(learnset.learnset!)
+                .map(([name, methods]) => ({ move: gens.get(args.generation).moves.get(name), method: methods })).filter(item => item);
+            console.log(movepool);
+            let moves_learned = Math.min(4, movepool.length);
+            for (let i: number = 0; i < moves_learned; i++) {
+                let picked = pickMove(movepool, moves, args, enforceStrictLearnset);
+                if (picked === "") i--;
+                if (picked === "") console.log("Move skipped");
+                else moves.push(picked);
+            }
+            break;
+        case 'Nat Dex':
+        //todo: figure out wtf to do here. will need to somehow check for move conflicts
+        default:
+            return [];
+    }
+
+    return moves;
+}
+
+//pick a move, non-natdex edition
+function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: GenerationOptions, enforceStrictLearnset: boolean): string {
+    try {
+
+        let index = Math.floor(Math.random() * movepool.length)
+
+        //failed check: the move is null
+        if (!movepool[index]) return "";
+
+        //strips methods down to their base generations, keeping whether or not it was learned by event, egg or tutor
+        let gens_learned = movepool[index].method.map(m => m.includes('S') || m.includes('E')
+            || m.includes('T') ? m : m.slice(0, 1));
+
+        //failed check: the move cannot be learned in this generation and strict learnset is enforced
+        if (enforceStrictLearnset && !gens_learned.includes(args.generation)) return "";
+
+        //failed check: two event moves that are from different events
+        let incompatible_learned_event_moves = learnedMoves.map((move) => ({
+            move: move,
+            method: movepool.filter(o => o.move!.name === move && o.method.every(m => m.includes('S')))
+                .flatMap(o => o.method)
+        })).filter(o => o.method.length > 0).filter(o => o.method.some(m => !gens_learned.includes(m)));
+        if (gens_learned.every(m => m.includes('S'))
+            && incompatible_learned_event_moves.length > 0)
+            return "";
+
+        let move_name = movepool[index]!.move!.name;
+
+        //failed check: learning an egg move combined with other gen egg move or earlier gen tutor move
+        let latest_learned_egg_gen = gens_learned.filter(m => m.includes('E'))
+            .map(m => parseInt(m.replace('E', ''))).sort((a, b) => b - a)[0];
+        if (latest_learned_egg_gen) {
+            let incompatible_with_egg_move = learnedMoves.map((move) => ({
+                move: move,
+                method: movepool.filter(o => o.move!.name === move && o.method.every(m => m.includes('E') ||
+                    (m.includes('T') && parseInt(m.replace('T', '')) < latest_learned_egg_gen)))
+                    .flatMap(o => o.method)
+            })).filter(o => o.method.length > 0).filter(o => o.method.some(m => !gens_learned.includes(m)));
+            if (gens_learned.every(m => m.includes('E'))
+                && incompatible_with_egg_move.length > 0)
+                return "";
+        }
+
+        //failed check: learning a tutor move combined with later gen egg move
+        let latest_learned_tutor_gen = gens_learned.filter(m => m.includes('T'))
+            .map(m => parseInt(m.replace('T', ''))).sort((a, b) => b - a)[0];
+        if (latest_learned_tutor_gen) {
+            let incompatible_with_tutor_move = learnedMoves.map((move) => ({
+                move: move,
+                method: movepool.filter(o => o.move!.name === move && 
+                    o.method.every(m => (m.includes('E') && parseInt(m.replace('E', '')) > latest_learned_tutor_gen)))
+                    .flatMap(o => o.method)
+            })).filter(o => o.method.length > 0).filter(o => o.method.some(m => !gens_learned.includes(m)));
+            if (gens_learned.every(m => m.includes('T'))
+                && incompatible_with_tutor_move.length > 0)
+                return "";
+        }
+
+
+        //failed check: move already exists in movepool
+        if (!learnedMoves.includes(move_name)) return move_name;
+        else return "";
+
+    } catch (error) {
+        //failed check: some weird error occurred
+        console.log('An error occurred while picking a move. The generation handled' +
+            'this error gracefully, but you should report this error to the site administrator.');
+        console.log(error);
+        return "";
+    }
 }
 
 export function getPokemonByGeneration(generation: number) {

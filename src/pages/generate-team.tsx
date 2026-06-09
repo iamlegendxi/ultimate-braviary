@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { fetchFormats } from '../utils/format-fetcher'
+import { fetchFormats } from '../utils/formats'
 import { generateTeam, getPokemonByGeneration } from '../utils/generator'
 import '../styles/generate-team.css'
 
 const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex']
+let user = 0; //temporary value, 0 = guest. replace when logins are working
 
 export default function GenerateTeam() {
   const [generation, setGeneration] = useState('')
@@ -18,8 +19,9 @@ export default function GenerateTeam() {
     setCheckboxes((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  const getPokemon = (): string[] => {
-    let team = generateTeam({
+  const getPokemon = async (): Promise<string[]> => {
+    let team = await generateTeam({
+      user,
       tier,
       generation,
       includeLegendaries: checkboxes.allowLegendaries,
