@@ -74,5 +74,5 @@ export const BANLISTS_OU = {
     'gen6moves': [''],
     'gen7moves': [''],
     'gen8moves': [''],
-    'gen9moves': [''],
+    'gen9moves': ['Shed Tail', 'Last Respects', 'Tera Blast'],
 }
