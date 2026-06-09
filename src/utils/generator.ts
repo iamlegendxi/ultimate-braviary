@@ -1,5 +1,5 @@
 import { Dex } from '@pkmn/dex';
-import { Generations, Specie, type Item, type Move } from '@pkmn/data';
+import { Generations, Specie, type Ability, type Item, type Move } from '@pkmn/data';
 import * as Banlists from './custom-banlists';
 
 const gens = new Generations(Dex);
@@ -23,7 +23,7 @@ export interface GenerationOptions {
     forceOneAttackingMove: boolean; //all Pokemon will have at least one attacking move - true by default
 }
 
-export function generateTeam(args: GenerationOptions): Move[] {
+export function generateTeam(args: GenerationOptions): Ability[] {
 
     let whitelist = generatePokemonWhitelist(args);
     let item_whitelist = generateItemWhitelist(args);
@@ -36,7 +36,7 @@ export function generateTeam(args: GenerationOptions): Move[] {
 
     //todo: generate 6 Pokemon with a held item, ability, 4 moves, and a shiny status
 
-    return move_whitelist;
+    return ability_whitelist;
 }
 
 function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
@@ -97,7 +97,7 @@ function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'AG').map(pokemon => pokemon)];
         case 'AG':
             break; //no filtering required, AG is everyone
-        case '1v1':
+        case '1V1':
             break; //todo: filtering is required but I need to retrieve a banlist first
         default:
             return [];
@@ -130,7 +130,7 @@ function generateItemWhitelist(args: GenerationOptions): Item[] {
         case 'UBER':
         case 'AG':
             break; //no item bans in this tier
-        case '1v1':
+        case '1V1':
             break;
         default:
             break;
@@ -147,7 +147,7 @@ function generateItemWhitelist(args: GenerationOptions): Item[] {
 function generateMoveWhitelist(args: GenerationOptions): Move[] {
 
     let banlist: string[];
-    let fetch_string = args.generation === 'Nat Dex' ? 'natdexitems' : `gen${args.generation}moves`;
+    let fetch_string = args.generation === 'Nat Dex' ? 'natdexmoves' : `gen${args.generation}moves`;
     //todo: change nat dex to pull all moves, not just gen 9
     let moves = args.generation === 'Nat Dex' ? gens.get('9').moves : gens.get(args.generation).moves;
 
@@ -164,7 +164,7 @@ function generateMoveWhitelist(args: GenerationOptions): Move[] {
         case 'UBER':
         case 'AG':
             break; //no item bans in this tier
-        case '1v1':
+        case '1V1':
             break;
         default:
             break;
@@ -177,16 +177,39 @@ function generateMoveWhitelist(args: GenerationOptions): Move[] {
     return whitelist;
 }
 
-function generateAbilityWhitelist(args: GenerationOptions): string[] {
-    return [];
+function generateAbilityWhitelist(args: GenerationOptions): Ability[] {
+    let banlist: string[];
+    let fetch_string = args.generation === 'Nat Dex' ? 'natdexabilities' : `gen${args.generation}abilities`;
+    //todo: change nat dex to pull all abilities, not just gen 9
+    let abilities = args.generation === 'Nat Dex' ? gens.get('9').abilities : gens.get(args.generation).abilities;
+
+    switch (args.tier.toUpperCase()) {
+        case 'LC':
+        case 'ZU':
+        case 'PU':
+        case 'NU':
+        case 'RU':
+        case 'UU':
+        case 'OU':
+            banlist = Banlists.BANLISTS_OU[fetch_string as keyof typeof Banlists.BANLISTS_OU];
+            break;
+        case 'UBER':
+        case 'AG':
+            break; //no item bans in this tier
+        case '1V1':
+            break;
+        default:
+            break;
+    }
+
+    //todo: ability clauses
+
+    let whitelist = [...abilities].filter(ability => !banlist.includes(ability.name));
+    return whitelist;
 }
 
 export function getPokemonByGeneration(generation: number) {
     const species = gens.get(generation).species;
     return [...species].filter(pokemon => pokemon.tier.toUpperCase() === 'OU').map(pokemon => pokemon.name);
-}
 
-export function getPokemonTier(generation: number) {
-    const species = gens.get(generation).species;
-    return species.get('articuno')?.tier;
 }

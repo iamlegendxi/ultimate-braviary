@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fetchFormats } from '../utils/format-fetcher'
-import { generateTeam, getPokemonByGeneration, getPokemonTier } from '../utils/generator'
+import { generateTeam, getPokemonByGeneration } from '../utils/generator'
 import '../styles/generate-team.css'
 
 const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex']
