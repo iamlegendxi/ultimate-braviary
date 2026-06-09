@@ -1,5 +1,6 @@
 import { Dex } from '@pkmn/dex';
-import { Generations } from '@pkmn/data';
+import { Generations, Specie, type Item } from '@pkmn/data';
+import * as Banlists from './custom-banlists';
 
 const gens = new Generations(Dex);
 
@@ -9,6 +10,8 @@ export interface Pokemon {
     types: string[];
     ability: string;
     moves: string[];
+    evs: number[];
+    heldItem: string;
     shiny: boolean;
 }
 
@@ -20,8 +23,23 @@ export interface GenerationOptions {
     forceOneAttackingMove: boolean; //all Pokemon will have at least one attacking move - true by default
 }
 
-export function generateTeam(args: GenerationOptions): Pokemon[] {
+export function generateTeam(args: GenerationOptions): Item[] {
 
+    let whitelist = generatePokemonWhitelist(args);
+    let item_whitelist = generateItemWhitelist(args);
+    let move_whitelist = generateMoveWhitelist(args);
+    let ability_whitelist = generateAbilityWhitelist(args);
+
+    //todo: generate seed
+
+    let seed = 0;
+
+    //todo: generate 6 Pokemon with a held item, ability, 4 moves, and a shiny status
+
+    return item_whitelist;
+}
+
+function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
     let species;
 
     switch (args.generation) {
@@ -37,55 +55,128 @@ export function generateTeam(args: GenerationOptions): Pokemon[] {
             species = gens.get(args.generation).species;
             break;
         case 'Nat Dex':
-            //figure out wtf to do here
+        //todo: figure out wtf to do here
         default:
             return [];
     }
 
-    let banlist: number[] = [];
+    let banlist: Specie[] = [];
 
 
     //fallthrough in this switch statement is intentional
     switch (args.tier.toUpperCase()) {
         // @ts-ignore
         case 'LC':
-            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'ZU').map(pokemon => pokemon.num)];
-        //add additional LC banned Pokemon here
+            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'ZU').map(pokemon => pokemon)];
+        //todo: add additional LC banned Pokemon here
         // @ts-ignore
         case 'ZU':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'PU'
-                    || pokemon.tier.toUpperCase() === 'ZUBL').map(pokemon => pokemon.num)];
+                || pokemon.tier.toUpperCase() === 'ZUBL').map(pokemon => pokemon)];
         // @ts-ignore
         case 'PU':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'NU'
-                    || pokemon.tier.toUpperCase() === 'PUBL').map(pokemon => pokemon.num)];
+                || pokemon.tier.toUpperCase() === 'PUBL').map(pokemon => pokemon)];
         // @ts-ignore
         case 'NU':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'RU'
-                    || pokemon.tier.toUpperCase() === 'NUBL').map(pokemon => pokemon.num)];
+                || pokemon.tier.toUpperCase() === 'NUBL').map(pokemon => pokemon)];
         // @ts-ignore
         case 'RU':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'UU'
-                    || pokemon.tier.toUpperCase() === 'RUBL').map(pokemon => pokemon.num)];
+                || pokemon.tier.toUpperCase() === 'RUBL').map(pokemon => pokemon)];
         // @ts-ignore
         case 'UU':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'OU'
-                    || pokemon.tier.toUpperCase() === 'UUBL').map(pokemon => pokemon.num)];
+                || pokemon.tier.toUpperCase() === 'UUBL').map(pokemon => pokemon)];
         // @ts-ignore
         case 'OU':
-            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'UBERS').map(pokemon => pokemon.num)];
+            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'UBER').map(pokemon => pokemon)];
         // @ts-ignore
-        case 'UBERS':
-            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'AG').map(pokemon => pokemon.num)];
+        case 'UBER':
+            banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'AG').map(pokemon => pokemon)];
         case 'AG':
             break; //no filtering required, AG is everyone
         case '1v1':
-            break; //filtering is required but I need to retrieve a banlist first
+            break; //todo: filtering is required but I need to retrieve a banlist first
         default:
-            break;
+            return [];
 
     }
 
+    //todo: further filter legendaries - check Specie.tags for Legendary, Mythical, Ultra Beast, etc
+    //todo: blanket filters like filtering Illegal pokemon and unreleased ones
+
+    let whitelist = [...species].filter(pokemon => !banlist.includes(pokemon));
+    return whitelist;
+}
+
+function generateItemWhitelist(args: GenerationOptions): Item[] {
+
+    let banlist: string[];
+    let fetch_string = args.generation === 'Nat Dex' ? 'natdexitems' : `gen${args.generation}items`;
+    let items = args.generation === 'Nat Dex' ? gens.get('9').items : gens.get(args.generation).items;
+
+    switch (args.tier.toUpperCase()) {
+        case 'LC':
+        case 'ZU':
+        case 'PU':
+        case 'NU':
+        case 'RU':
+        case 'UU':
+        case 'OU':
+            banlist = Banlists.BANLISTS_OU[fetch_string as keyof typeof Banlists.BANLISTS_OU];
+            break;
+        case 'UBER':
+        case 'AG':
+            break; //no item bans in this tier
+        case '1v1':
+            break;
+        default:
+            break;
+    }
+
+    //todo: item clauses
+    //todo: filter out unusable items
+
+    let whitelist = [...items].filter(item => !banlist.includes(item.name));
+    return whitelist;
+}
+
+
+function generateMoveWhitelist(args: GenerationOptions): string[] {
+
+    let banlist: string[];
+    let fetch_string = args.generation === 'Nat Dex' ? 'natdexitems' : `gen${args.generation}moves`;
+    let moves = args.generation === 'Nat Dex' ? gens.get('9').items : gens.get(args.generation).moves;
+
+    switch (args.tier.toUpperCase()) {
+        case 'LC':
+        case 'ZU':
+        case 'PU':
+        case 'NU':
+        case 'RU':
+        case 'UU':
+        case 'OU':
+            banlist = Banlists.BANLISTS_OU[fetch_string as keyof typeof Banlists.BANLISTS_OU];
+            break;
+        case 'UBER':
+        case 'AG':
+            break; //no item bans in this tier
+        case '1v1':
+            break;
+        default:
+            break;
+    }
+
+    //todo: move clauses
+    //todo: filter out unusable moves
+
+
+    return [];
+}
+
+function generateAbilityWhitelist(args: GenerationOptions): string[] {
     return [];
 }
 

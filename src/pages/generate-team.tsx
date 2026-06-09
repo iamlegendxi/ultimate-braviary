@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fetchFormats } from '../utils/format-fetcher'
-import { getPokemonByGeneration, getPokemonTier } from '../utils/generator'
+import { generateTeam, getPokemonByGeneration, getPokemonTier } from '../utils/generator'
 import '../styles/generate-team.css'
 
 const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex']
@@ -19,7 +19,14 @@ export default function GenerateTeam() {
   }
 
   const getPokemon = (): string[] => {
-    console.log(getPokemonTier(4));
+    let team = generateTeam({
+      tier,
+      generation,
+      includeLegendaries: checkboxes.allowLegendaries,
+      includeNFE: checkboxes.allowNFE,
+      forceOneAttackingMove: checkboxes.forceAttackingMove
+    });
+    console.log(team);
     return getPokemonByGeneration(parseInt(generation));
   }
 
@@ -87,6 +94,11 @@ export default function GenerateTeam() {
                 </label>
               ))}
             </div>
+            {/* Future options:
+                - all clauses
+                - ev generation options (complete random, 252/252/4, maxed, etc)
+                - surprise me: obfuscate results and only allow copy/pasting the showdown import
+                 */}
 
             <button className="generate-button" onClick={getPokemon}>
               Generate
