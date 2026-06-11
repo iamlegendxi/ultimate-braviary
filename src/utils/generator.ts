@@ -56,6 +56,7 @@ export async function generateTeam(args: GenerationOptions): Promise<any> {
         let pickedMon = whitelist[index];
         console.log(pickedMon.name);
         let learnset = await getPokemonLearnset(pickedMon, args, move_whitelist);
+        let ability = getPokemonAbility(pickedMon, args, ability_whitelist);
         ret = learnset;
         break;
 
@@ -137,7 +138,7 @@ function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
     }
 
     //todo: further filter legendaries - check Specie.tags for Legendary, Mythical, Ultra Beast, etc
-    //todo: filter non-tiered NFE and LC if nfe tag is checked
+    //todo: filter out pokemon who arent fully evolved - check evos.length
     //todo: blanket filters like filtering Illegal pokemon and unreleased ones
 
     let whitelist = [...species].filter(pokemon => !banlist.includes(pokemon));
@@ -293,10 +294,12 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whit
             }
             console.log(movepool);
             let moves_learned = Math.min(4, movepool.length);
+            let loopbreaker = 0;
             for (let i: number = 0; i < moves_learned; i++) {
                 let picked = pickMove(movepool, moves, args, whitelist, enforceStrictLearnset);
-                if (picked === "") i--;
+                if (picked === "") { i--; loopbreaker++ }
                 else moves.push(picked);
+                if (loopbreaker < 200) break; //escape loop if it fails to generate a move enough times
             }
             break;
         case 'Nat Dex':
@@ -306,6 +309,31 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whit
     }
 
     return moves;
+}
+
+function getPokemonAbility(pokemon: Specie, args: GenerationOptions, whitelist: Ability[]): string {
+    //todo: change nat dex to pull all abilities
+    let abilities;
+
+    switch (args.generation) {
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            abilities = Object.values(pokemon.abilities).map(name => gens.get(args.generation).abilities.get(name))
+                .filter(ability => ability !== undefined);
+            if (!abilities) return "";
+            return pickAbility(abilities, whitelist);
+        case 'Nat Dex':
+        default:
+            return "";
+
+    }
 }
 
 //pick a move, non-natdex edition
@@ -383,6 +411,33 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
         //failed check: some weird error occurred
         console.log('An error occurred while picking a move. The generation handled' +
             'this error gracefully, but you should report this error to the site administrator.');
+        console.log(error);
+        return "";
+    }
+}
+
+//pick a move, natdex edition
+function pickNatdexMove(movepool: MoveMethodObject[], learnedMoves: string[], args: GenerationOptions,
+    whitelist: Move[], enforceStrictLearnset: boolean) {
+    //do later
+}
+
+function pickAbility(abilities: Ability[], whitelist: Ability[]): string {
+
+    try {
+        //failed check, viable ability pool is empty. also the base case for the recursive call
+        if (abilities.length = 0) return ""; 
+
+        let index = Math.floor(Math.random() * abilities.length);
+        let available = [...abilities.slice(0, index), ...abilities.slice(index)];
+        let candidate = abilities[index];
+
+        if (!whitelist.includes(candidate)) return pickAbility(available, whitelist);
+
+        return ""
+    } catch (error) {
+        //failed check: some weird error occurred
+        console.log('An error occurred while picking an ability.');
         console.log(error);
         return "";
     }
