@@ -3,7 +3,7 @@ import { fetchFormats } from '../utils/formats'
 import { generateTeam } from '../utils/generator'
 import '../styles/generate-team.css'
 
-const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex']
+const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 let user = 0; //temporary value, 0 = guest. replace when logins are working
 
 export default function GenerateTeam() {
