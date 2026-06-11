@@ -4,6 +4,12 @@ import { generateTeam } from '../utils/generator'
 import '../styles/generate-team.css'
 
 const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+const CHECKBOX_LABELS: Record<'allowLegendaries' | 'allowNFE' | 'forceAttackingMove', string> = {
+  allowLegendaries: 'Allow Legendaries',
+  allowNFE: 'Allow NFE',
+  forceAttackingMove: 'Force Attacking Move'
+}
+
 let user = 0; //temporary value, 0 = guest. replace when logins are working
 
 export default function GenerateTeam() {
@@ -49,7 +55,7 @@ export default function GenerateTeam() {
                     id="generation"
                     className="form-select"
                     value={generation}
-                    onChange={(e) => {setGeneration(e.target.value); setTier('')}}
+                    onChange={(e) => { setGeneration(e.target.value); setTier('') }}
                   >
                     <option value="" disabled>Select...</option>
                     {GENERATIONS.map((g) => (
@@ -82,17 +88,19 @@ export default function GenerateTeam() {
 
             <div className="form-divider" />
 
+
             <div className="checkbox-group">
               {(['allowLegendaries', 'allowNFE', 'forceAttackingMove'] as const).map((key) => (
-                <label key={key} className="checkbox-label">
+                <label key={key} htmlFor={`${key}Checkbox`} className="checkbox-label">
                   <input
+                    id={`${key}Checkbox`}
                     type="checkbox"
                     className="checkbox-input"
                     checked={checkboxes[key]}
                     onChange={() => toggleCheckbox(key)}
                   />
                   <span className="checkbox-custom" />
-                  <span className="checkbox-text">{key}</span>
+                  <span className="checkbox-text">{CHECKBOX_LABELS[key]}</span>
                 </label>
               ))}
             </div>

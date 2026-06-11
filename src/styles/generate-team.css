@@ -166,6 +166,61 @@
   border-color: var(--accent);
 }
 
+#forceAttackingMoveCheckbox + .checkbox-custom + .checkbox-text {
+  position: relative;
+}
+
+#forceAttackingMoveCheckbox + .checkbox-custom + .checkbox-text::after {
+  content: 'Forces at least one non-status move on all generated Pokemon (except Pyukumuku)';
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface);
+  border: 1px solid rgba(192, 40, 42, 0.2);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  white-space: normal;
+  max-width: 200px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+#forceAttackingMoveCheckbox:hover + .checkbox-custom + .checkbox-text::after {
+  opacity: 1;
+}
+
+#allowNFECheckbox + .checkbox-custom + .checkbox-text {
+  position: relative;
+}
+
+#allowNFECheckbox + .checkbox-custom + .checkbox-text::after {
+  content: 'Allows untiered, non-fully evolved Pokemon to appear.';
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface);
+  border: 1px solid rgba(192, 40, 42, 0.2);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  white-space: normal;
+  max-width: 200px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+#allowNFECheckbox:hover + .checkbox-custom + .checkbox-text::after {
+  opacity: 1;
+}
+
 /* ── Submit button ── */
 .generate-button {
   width: 100%;
