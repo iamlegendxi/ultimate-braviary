@@ -39,32 +39,42 @@ export interface GenerationOptions {
 
 export async function generateTeam(args: GenerationOptions): Promise<any> {
 
-    let whitelist = generatePokemonWhitelist(args);
-    let item_whitelist = generateItemWhitelist(args);
-    let move_whitelist = generateMoveWhitelist(args);
-    let ability_whitelist = generateAbilityWhitelist(args);
+    const whitelist = generatePokemonWhitelist(args);
+    const item_whitelist = generateItemWhitelist(args);
+    const move_whitelist = generateMoveWhitelist(args);
+    const ability_whitelist = generateAbilityWhitelist(args);
 
     //todo: generate 6 Pokemon with a held item, ability, 4 moves, and a shiny status
 
-    let pokemon_generated = args.tier.toUpperCase() === '1V1' ? 1 : 6;
+    const pokemon_generated = args.tier.toUpperCase() === '1V1' ? 1 : 6;
     let mons: Pokemon[] = [];
-
-    let ret;
 
     for (let i: number = 0; i < pokemon_generated; i++) {
         const index = Math.floor(Math.random() * whitelist.length)
         const pickedMon = whitelist[index];
-        console.log(pickedMon.name);
-        const learnset = await getPokemonLearnset(pickedMon, args, move_whitelist);
+        const movepool = await getPokemonMovepool(pickedMon, args, move_whitelist);
         const ability = getPokemonAbility(pickedMon, args, ability_whitelist);
-        console.log(ability);
         const held_item = getHeldItem(args, item_whitelist);
-        console.log(held_item);
         const ev_spread = getEvSpread(args);
         const shiny = doShinyChance();
-        console.log(shiny);
-        ret = learnset;
-        break;
+        const img_url = `https://www.smogon.com/dex/media/sprites/xy/${pickedMon.name.toLowerCase()}.gif`
+
+
+
+        //now that everything generated, build the pokemon and add it to team
+        const mon: Pokemon = {
+            id: pickedMon.num,
+            name: pickedMon.name,
+            types: pickedMon.types,
+            ability: ability,
+            moves: movepool,
+            evs: ev_spread,
+            heldItem: held_item,
+            shiny: shiny,
+            image: img_url
+        }
+
+        mons.push(mon);
 
     }
 
@@ -75,7 +85,7 @@ export async function generateTeam(args: GenerationOptions): Promise<any> {
 
     //todo: build team from pokemon
 
-    return ret;
+    return mons;
 }
 
 function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
@@ -252,7 +262,7 @@ function generateSeed(args: GenerationOptions, mons: Pokemon[], timestamp: numbe
     return seed;
 }
 
-async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whitelist: Move[]): Promise<string[]> {
+async function getPokemonMovepool(pokemon: Specie, args: GenerationOptions, whitelist: Move[]): Promise<string[]> {
     let learnset; let movepool;
     let enforceStrictLearnset: boolean; //forces all moves to be learnable in the currently selected generation
     let moves: string[] = [];
@@ -272,7 +282,6 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whit
         case '9':
             enforceStrictLearnset = true;
             if (base_mon !== pokemon.name) {
-                console.log('Alternate form detected');
                 //merge base form's moveset with form's moveset
                 const [form_set, base_set] = await Promise.all([
                     gens.get(args.generation).learnsets.get(pokemon.name),
@@ -298,7 +307,6 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whit
                     .map(([name, methods]) => ({ move: gens.get(args.generation).moves.get(name), method: methods }))
                     .filter(item => item.move != undefined);
             }
-            console.log(movepool);
             let moves_learned = Math.min(4, movepool.length);
             let loopbreaker = 0;
             for (let i: number = 0; i < moves_learned; i++) {
@@ -334,7 +342,6 @@ function getPokemonAbility(pokemon: Specie, args: GenerationOptions, whitelist: 
             abilities = Object.values(pokemon.abilities).map(name => gens.get(args.generation).abilities.get(name))
                 .filter(ability => ability !== undefined);
             if (!abilities) return "";
-            console.log(abilities);
             return pickAbility(abilities, whitelist);
         case 'Nat Dex':
         default:
@@ -355,7 +362,7 @@ function getEvSpread(args: GenerationOptions): number[] {
     return pickEvs(args, MAX_EVS, MAX_EVS_STAT);
 }
 
-function doShinyChance(): Boolean {
+function doShinyChance(): boolean {
     //currently 50% shiny odds
     //todo: change based on user feedback
     return Math.floor(Math.random()) === 1;
@@ -497,28 +504,25 @@ function pickEvs(args: GenerationOptions, MAX_EVS: number, MAX_EVS_STAT: number)
         let available_indeces = [0, 1, 2, 3, 4, 5];
         let pool = MAX_EVS;
 
+
+        //complete random
         while (pool > 0) {
             let value = Math.floor(Math.random() * MAX_EVS_STAT);
-            const chosen_stat = Math.floor(Math.random() * available_indeces.length);
+            const index = Math.floor(Math.random() * available_indeces.length);
+            const chosen_stat = available_indeces[index];
             value = Math.min(value, pool);
             //todo: if use all evs enabled and available indeces length = 1 value = pool;
 
             ev_spread[chosen_stat] = value;
-            available_indeces = [...available_indeces.slice(0, chosen_stat), ...available_indeces.slice(chosen_stat)];
+            available_indeces = [...available_indeces.slice(0, chosen_stat), 
+                ...(chosen_stat === 5 ? [] : available_indeces.slice(chosen_stat + 1))];
             pool -= value;
         }
 
-        //completely random evs in each stat
         return ev_spread;
     } catch (error) {
         console.log("An error occurred while generating your EVs. By default, EVs will not be generated.");
         console.log(error);
-        return [];
+        return [0, 0, 0, 0, 0, 0];
     }
-}
-
-export function getPokemonByGeneration(generation: number) {
-    const species = gens.get(generation).species;
-    return [...species].filter(pokemon => pokemon.tier.toUpperCase() === 'OU').map(pokemon => pokemon.name);
-
 }

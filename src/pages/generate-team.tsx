@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { fetchFormats } from '../utils/formats'
-import { generateTeam, getPokemonByGeneration } from '../utils/generator'
+import { generateTeam } from '../utils/generator'
 import '../styles/generate-team.css'
 
 const GENERATIONS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Nat Dex']
@@ -29,7 +29,7 @@ export default function GenerateTeam() {
       forceOneAttackingMove: checkboxes.forceAttackingMove
     });
     console.log(team);
-    return getPokemonByGeneration(parseInt(generation));
+    return team;
   }
 
   const TIERS = generation ? fetchFormats(generation) : []
