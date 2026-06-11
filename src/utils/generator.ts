@@ -1,5 +1,5 @@
 import { Dex } from '@pkmn/dex';
-import { Generations, type Learnset, Specie, type Ability, type Item, type Move } from '@pkmn/data';
+import { Generations, Specie, type Ability, type Item, type Move } from '@pkmn/data';
 import * as Banlists from './custom-banlists';
 
 const gens = new Generations(Dex);
