@@ -57,6 +57,7 @@ export async function generateTeam(args: GenerationOptions): Promise<any> {
         console.log(pickedMon.name);
         let learnset = await getPokemonLearnset(pickedMon, args, move_whitelist);
         let ability = getPokemonAbility(pickedMon, args, ability_whitelist);
+        console.log(ability);
         ret = learnset;
         break;
 
@@ -267,6 +268,7 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whit
         case '9':
             enforceStrictLearnset = true;
             if (base_mon !== pokemon.name) {
+                console.log('Alternate form detected');
                 //merge base form's moveset with form's moveset
                 const [form_set, base_set] = await Promise.all([
                     gens.get(args.generation).learnsets.get(pokemon.name),
@@ -299,7 +301,7 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whit
                 let picked = pickMove(movepool, moves, args, whitelist, enforceStrictLearnset);
                 if (picked === "") { i--; loopbreaker++ }
                 else moves.push(picked);
-                if (loopbreaker < 200) break; //escape loop if it fails to generate a move enough times
+                if (loopbreaker > 200) break; //escape loop if it fails to generate a move enough times
             }
             break;
         case 'Nat Dex':
@@ -328,6 +330,7 @@ function getPokemonAbility(pokemon: Specie, args: GenerationOptions, whitelist: 
             abilities = Object.values(pokemon.abilities).map(name => gens.get(args.generation).abilities.get(name))
                 .filter(ability => ability !== undefined);
             if (!abilities) return "";
+            console.log(abilities);
             return pickAbility(abilities, whitelist);
         case 'Nat Dex':
         default:
@@ -426,7 +429,7 @@ function pickAbility(abilities: Ability[], whitelist: Ability[]): string {
 
     try {
         //failed check, viable ability pool is empty. also the base case for the recursive call
-        if (abilities.length = 0) return ""; 
+        if (abilities.length === 0) return "";
 
         let index = Math.floor(Math.random() * abilities.length);
         let available = [...abilities.slice(0, index), ...abilities.slice(index)];
@@ -434,7 +437,7 @@ function pickAbility(abilities: Ability[], whitelist: Ability[]): string {
 
         if (!whitelist.includes(candidate)) return pickAbility(available, whitelist);
 
-        return ""
+        else return candidate.name;
     } catch (error) {
         //failed check: some weird error occurred
         console.log('An error occurred while picking an ability.');
