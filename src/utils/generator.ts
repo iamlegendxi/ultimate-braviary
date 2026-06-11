@@ -111,13 +111,16 @@ function generatePokemonWhitelist(args: GenerationOptions): Specie[] {
 
     let banlist: Specie[] = [];
 
-
+    if (!args.includeNFE) banlist =
+        [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'LC'
+            || pokemon.tier.toUpperCase() == 'NFE').map(pokemon => pokemon)];
+    
     //fallthrough in this switch statement is intentional
     switch (args.tier.toUpperCase()) {
         // @ts-ignore
         case 'LC':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'ZU').map(pokemon => pokemon)];
-        //todo: add additional LC banned Pokemon here
+        //todo: add additional LC banned Pokemon here ?
         // @ts-ignore
         case 'ZU':
             banlist = [...banlist, ...[...species].filter(pokemon => pokemon.tier.toUpperCase() === 'PU'
@@ -514,8 +517,8 @@ function pickEvs(args: GenerationOptions, MAX_EVS: number, MAX_EVS_STAT: number)
             //todo: if use all evs enabled and available indeces length = 1 value = pool;
 
             ev_spread[chosen_stat] = value;
-            available_indeces = [...available_indeces.slice(0, chosen_stat), 
-                ...(chosen_stat === 5 ? [] : available_indeces.slice(chosen_stat + 1))];
+            available_indeces = [...available_indeces.slice(0, chosen_stat),
+            ...(chosen_stat === 5 ? [] : available_indeces.slice(chosen_stat + 1))];
             pool -= value;
         }
 
