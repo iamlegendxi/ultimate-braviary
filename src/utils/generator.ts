@@ -52,12 +52,17 @@ export async function generateTeam(args: GenerationOptions): Promise<any> {
     let ret;
 
     for (let i: number = 0; i < pokemon_generated; i++) {
-        let index = Math.floor(Math.random() * whitelist.length)
-        let pickedMon = whitelist[index];
+        const index = Math.floor(Math.random() * whitelist.length)
+        const pickedMon = whitelist[index];
         console.log(pickedMon.name);
-        let learnset = await getPokemonLearnset(pickedMon, args, move_whitelist);
-        let ability = getPokemonAbility(pickedMon, args, ability_whitelist);
+        const learnset = await getPokemonLearnset(pickedMon, args, move_whitelist);
+        const ability = getPokemonAbility(pickedMon, args, ability_whitelist);
         console.log(ability);
+        const held_item = getHeldItem(args, item_whitelist);
+        console.log(held_item);
+        const ev_spread = getEvSpread(args);
+        const shiny = doShinyChance();
+        console.log(shiny);
         ret = learnset;
         break;
 
@@ -178,7 +183,6 @@ function generateItemWhitelist(args: GenerationOptions): Item[] {
     return whitelist;
 }
 
-
 function generateMoveWhitelist(args: GenerationOptions): Move[] {
 
     let banlist: string[];
@@ -252,7 +256,7 @@ async function getPokemonLearnset(pokemon: Specie, args: GenerationOptions, whit
     let learnset; let movepool;
     let enforceStrictLearnset: boolean; //forces all moves to be learnable in the currently selected generation
     let moves: string[] = [];
-    let base_mon = pokemon.baseSpecies ?? pokemon.name
+    const base_mon = pokemon.baseSpecies ?? pokemon.name
 
     switch (args.generation) {
         case '1':
@@ -339,12 +343,30 @@ function getPokemonAbility(pokemon: Specie, args: GenerationOptions, whitelist: 
     }
 }
 
+function getHeldItem(args: GenerationOptions, whitelist: Item[]): string {
+    //todo: item generation rules
+    return pickItem(whitelist);
+}
+
+function getEvSpread(args: GenerationOptions): number[] {
+    //todo: ev spread options on frontend
+    const MAX_EVS = 508; //change once hackmons is added
+    const MAX_EVS_STAT = 252;
+    return pickEvs(args, MAX_EVS, MAX_EVS_STAT);
+}
+
+function doShinyChance(): Boolean {
+    //currently 50% shiny odds
+    //todo: change based on user feedback
+    return Math.floor(Math.random()) === 1;
+}
+
 //pick a move, non-natdex edition
 function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: GenerationOptions,
     whitelist: Move[], enforceStrictLearnset: boolean): string {
     try {
 
-        let index = Math.floor(Math.random() * movepool.length)
+        const index = Math.floor(Math.random() * movepool.length)
 
         //failed check: the move is null
         if (!movepool[index] || !movepool[index].move) return "";
@@ -353,14 +375,14 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
         if (!whitelist.includes(movepool[index].move)) return "";
 
         //strips methods down to their base generations, keeping whether or not it was learned by event, egg or tutor
-        let gens_learned = movepool[index].method.map(m => m.includes('S') || m.includes('E')
+        const gens_learned = movepool[index].method.map(m => m.includes('S') || m.includes('E')
             || m.includes('T') ? m : m.slice(0, 1));
 
         //failed check: the move cannot be learned in this generation and strict learnset is enforced
         if (enforceStrictLearnset && !gens_learned.includes(args.generation)) return "";
 
         //failed check: two event moves that are from different events
-        let incompatible_learned_event_moves = learnedMoves.map((move) => ({
+        const incompatible_learned_event_moves = learnedMoves.map((move) => ({
             move: move,
             method: movepool.filter(o => o.move && o.move.name === move && o.method.every(m => m.includes('S')))
                 .flatMap(o => o.method)
@@ -369,13 +391,13 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
             && incompatible_learned_event_moves.length > 0)
             return "";
 
-        let move_name = movepool[index].move.name;
+        const move_name = movepool[index].move.name;
 
         //failed check: learning an egg move combined with other gen egg move or earlier gen tutor move
-        let latest_learned_egg_gen = gens_learned.filter(m => m.includes('E'))
+        const latest_learned_egg_gen = gens_learned.filter(m => m.includes('E'))
             .map(m => parseInt(m.replace('E', ''))).sort((a, b) => b - a)[0];
         if (latest_learned_egg_gen) {
-            let incompatible_with_egg_move = learnedMoves.map((move) => ({
+            const incompatible_with_egg_move = learnedMoves.map((move) => ({
                 move: move,
                 method: movepool.filter(o => o.move && o.move.name === move && o.method.every(m => m.includes('E') ||
                     (m.includes('T') && parseInt(m.replace('T', '')) < latest_learned_egg_gen)))
@@ -387,10 +409,10 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
         }
 
         //failed check: learning a tutor move combined with later gen egg move
-        let latest_learned_tutor_gen = gens_learned.filter(m => m.includes('T'))
+        const latest_learned_tutor_gen = gens_learned.filter(m => m.includes('T'))
             .map(m => parseInt(m.replace('T', ''))).sort((a, b) => b - a)[0];
         if (latest_learned_tutor_gen) {
-            let incompatible_with_tutor_move = learnedMoves.map((move) => ({
+            const incompatible_with_tutor_move = learnedMoves.map((move) => ({
                 move: move,
                 method: movepool.filter(o => o.move && o.move!.name === move &&
                     o.method.every(m => (m.includes('E') && parseInt(m.replace('E', '')) > latest_learned_tutor_gen)))
@@ -402,7 +424,7 @@ function pickMove(movepool: MoveMethodObject[], learnedMoves: string[], args: Ge
         }
 
         //failed check: forceAttackingMove is on and the pokemon can learn non-status moves (but hasn't yet)
-        let has_non_status_moves = movepool.some(m => m.move && m.move.category !== "Status");
+        const has_non_status_moves = movepool.some(m => m.move && m.move.category !== "Status");
         if ((args.forceOneAttackingMove && has_non_status_moves) && learnedMoves.length === 0
             && movepool[index].move?.category === "Status") return "";
 
@@ -431,9 +453,9 @@ function pickAbility(abilities: Ability[], whitelist: Ability[]): string {
         //failed check, viable ability pool is empty. also the base case for the recursive call
         if (abilities.length === 0) return "";
 
-        let index = Math.floor(Math.random() * abilities.length);
-        let available = [...abilities.slice(0, index), ...abilities.slice(index)];
-        let candidate = abilities[index];
+        const index = Math.floor(Math.random() * abilities.length);
+        const available = [...abilities.slice(0, index), ...abilities.slice(index)];
+        const candidate = abilities[index];
 
         if (!whitelist.includes(candidate)) return pickAbility(available, whitelist);
 
@@ -443,6 +465,55 @@ function pickAbility(abilities: Ability[], whitelist: Ability[]): string {
         console.log('An error occurred while picking an ability.');
         console.log(error);
         return "";
+    }
+}
+
+function pickItem(whitelist: Item[]): string {
+    try {
+        if (whitelist.length === 0) return "";
+
+        const index = Math.floor(Math.random() * whitelist.length);
+
+        return whitelist[index].name ?? "";
+
+    } catch (error) {
+        console.log("An error occurred while trying to pick an item. The pokemon will not be given a held item.");
+        console.log(error);
+        return "";
+    }
+}
+
+function pickEvs(args: GenerationOptions, MAX_EVS: number, MAX_EVS_STAT: number): number[] {
+
+    try {
+        // 0: "HP",
+        // 1: "ATK",
+        // 2: "DEF",
+        // 3: "SPA",
+        // 4: "SPD",
+        // 5: "SPE"
+
+        let ev_spread = [0, 0, 0, 0, 0, 0];
+        let available_indeces = [0, 1, 2, 3, 4, 5];
+        let pool = MAX_EVS;
+
+        while (pool > 0) {
+            let value = Math.floor(Math.random() * MAX_EVS_STAT);
+            const chosen_stat = Math.floor(Math.random() * available_indeces.length);
+            value = Math.min(value, pool);
+            //todo: if use all evs enabled and available indeces length = 1 value = pool;
+
+            ev_spread[chosen_stat] = value;
+            available_indeces = [...available_indeces.slice(0, chosen_stat), ...available_indeces.slice(chosen_stat)];
+            pool -= value;
+        }
+
+        //completely random evs in each stat
+        return ev_spread;
+    } catch (error) {
+        console.log("An error occurred while generating your EVs. By default, EVs will not be generated.");
+        console.log(error);
+        return [];
     }
 }
 
