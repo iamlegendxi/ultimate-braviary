@@ -1,6 +1,7 @@
 import { Dex } from '@pkmn/dex';
 import { Generations, Specie, type Ability, type Item, type Move } from '@pkmn/data';
 import * as Banlists from './custom-banlists';
+import { generateSeed } from './seed-generation';
 
 const gens = new Generations(Dex);
 
@@ -78,10 +79,8 @@ export async function generateTeam(args: GenerationOptions): Promise<any> {
 
     }
 
-
-    //todo: generate seed
-
-    let seed = generateSeed(args, [], Date.now());
+    //const seed = generateSeed(args, mons, Date.now());
+    //console.log(seed);
 
     //todo: build team from pokemon
 
@@ -258,11 +257,6 @@ function generateAbilityWhitelist(args: GenerationOptions): Ability[] {
 
     let whitelist = [...abilities].filter(ability => !banlist.includes(ability.name));
     return whitelist;
-}
-
-function generateSeed(args: GenerationOptions, mons: Pokemon[], timestamp: number): number {
-    let seed = timestamp ^ (args.user * 83492791);
-    return seed;
 }
 
 async function getPokemonMovepool(pokemon: Specie, args: GenerationOptions, whitelist: Move[]): Promise<string[]> {
@@ -505,12 +499,12 @@ function pickEvs(args: GenerationOptions, MAX_EVS: number, MAX_EVS_STAT: number)
 
         let ev_spread = [0, 0, 0, 0, 0, 0];
         let available_indeces = [0, 1, 2, 3, 4, 5];
-        let pool = MAX_EVS;
+        let pool = MAX_EVS / 4;
 
 
         //complete random
         while (pool > 0) {
-            let value = Math.floor(Math.random() * MAX_EVS_STAT);
+            let value = Math.floor(Math.random() * (MAX_EVS_STAT / 4));
             const index = Math.floor(Math.random() * available_indeces.length);
             const chosen_stat = available_indeces[index];
             value = Math.min(value, pool);
