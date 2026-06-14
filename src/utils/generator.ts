@@ -79,8 +79,8 @@ export async function generateTeam(args: GenerationOptions): Promise<any> {
 
     }
 
-    //const seed = generateSeed(args, mons, Date.now());
-    //console.log(seed);
+    const seed = generateSeed(args, mons, Date.now());
+    console.log(seed);
 
     //todo: build team from pokemon
 

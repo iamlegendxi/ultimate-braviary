@@ -1,4 +1,6 @@
 
+//this file may not be needed
+
 export interface GeneratedPokemon {
     id: number;
     name: string;
